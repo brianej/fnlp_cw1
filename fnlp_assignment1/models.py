@@ -51,7 +51,21 @@ class CountFeatureExtractor(FeatureExtractor):
         Output: Counter({0: 2, 1: 1, 2: 0})
         (In the above case, the token "foo" is not in the text, so its count is 0.)
         """
-        raise Exception("TODO: Implement this method")
+        # did the second implementation
+        # get lowercased tokens from text by splitting with spaces
+        list_words = text.lower().split(" ")
+        counter = Counter()
+        
+        # initialise the counter
+        for ids in self.tokenizer.id_to_token.keys():
+            counter[ids] = 0
+            
+        for word in list_words:
+            # increment count if the token is in the tokenizer
+            if word in self.tokenizer.token_to_id:
+                counter[self.tokenizer.token_to_id[word]] += 1
+        
+        return counter
 
 
 class CustomFeatureExtractor(FeatureExtractor):
