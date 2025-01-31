@@ -7,6 +7,7 @@ import time
 from tokenizers import Tokenizer
 import numpy as np
 from tqdm import tqdm
+import tokenizers
 
 import gensim.downloader as api
 
@@ -108,6 +109,12 @@ class MeanPoolingWordVectorFeatureExtractor(FeatureExtractor):
         Input `word`: "328hdnsr32ion"
         Output: None
         """
+        if self.word_to_vector_model.get(word) is not None:
+            return self.word_to_vector_model.get(word)
+        
+        else:
+            return None
+        
         raise Exception("TODO: Implement this method")
 
     def extract_features(self, text: List[str]) -> Counter:
@@ -122,8 +129,15 @@ class MeanPoolingWordVectorFeatureExtractor(FeatureExtractor):
         from token ids to their counts, normally you would not need to do this conversion.
         Remember to ignore words that do not have a word vector.
         """
+        tokens = self.tokenizers.tokenize(text)
+        vectors = [self.get_word_vector(word) for word in tokens if self.get_word_vector(word) is not None]
+        
+        if not vectors:
+            return Counter
+        mean_vector = np.mean(vectors,axis=0)
+        return Counter({i: float(val) for i, val in enumerate(mean_vector)})
         raise Exception("TODO: Implement this method")
-
+        
 
 class SentimentClassifier(object):
     """
