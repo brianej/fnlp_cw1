@@ -56,10 +56,6 @@ class CountFeatureExtractor(FeatureExtractor):
         # get lowercased tokens from text by splitting with spaces
         list_words = text.lower().split(" ")
         counter = Counter()
-        
-        # initialise the counter
-        for ids in self.tokenizer.id_to_token.keys():
-            counter[ids] = 0
             
         for word in list_words:
             # increment count if the token is in the tokenizer
@@ -192,7 +188,7 @@ class LogisticRegressionClassifier(SentimentClassifier):
     def sigmoid_score(self, text: str) -> float:
         # helper for p(y=1|x)
         # get counter features
-        features = self.featurizer.extract_features(words)
+        features = self.featurizer.extract_features(text)
         score = 0
         
         for ids, count in features.items():
@@ -222,7 +218,7 @@ class LogisticRegressionClassifier(SentimentClassifier):
         sigmoid_score = sigmoid(5) = 0.993...
         Output: 1
         """
-        return 1 if sigmoid_score(text) >= 0.5 else 0
+        return 1 if self.sigmoid_score(text) >= 0.5 else 0
 
     def set_weights(self, weights: np.ndarray):
         """
@@ -278,7 +274,7 @@ class LogisticRegressionClassifier(SentimentClassifier):
         for key, value in negative.items():
             p = sigmoid(self.weights[key] * value + self.bias)
             self.weights[key] += learning_rate * value * (0-p)
-            self.bias += learning_rate * p
+            self.bias += learning_rate * -p
 
 
 def get_accuracy(predictions: List[int], labels: List[int]) -> float:
@@ -291,6 +287,9 @@ def get_accuracy(predictions: List[int], labels: List[int]) -> float:
         if predictions[i] == labels[i]:
             num_correct += 1
     return num_correct / num_total
+
+def get_labels(dataset):
+    return [ex.label for ex in dataset]
 
 
 def run_model_over_dataset(
@@ -325,6 +324,7 @@ def train_logistic_regression(
     # any other variables you want to keep track of
     ##########################################
     model = LogisticRegressionClassifier(feat_extractor)
+    labels = get_labels(dev_exs)
     best_model = []
     best_model_accuracy = 0
     
@@ -372,7 +372,7 @@ def train_logistic_regression(
         # you may find the run_model_over_dataset 
         # and get_accuracy functions helpful
         ##########################################
-        dev_predictions = run_model_over_dataset(model, dev_exs)
+        dev_predictions = get_accuracy(run_model_over_dataset(model, dev_exs), labels)
         if dev_predictions > best_model_accuracy:
             best_model_accuracy = dev_predictions
             best_model = (model.get_weights(), model.get_bias())
@@ -386,7 +386,7 @@ def train_logistic_regression(
         # this step is helpful for debugging and making sure you are saving the best model so far
         # at the end of training, your 'best_dev_acc' should be the best accuracy on the dev set
         ##########################################
-        metrics = {"Best Model Accuray": self.best_model_accuracy, "Current Model Accuracy": dev_predictions}
+        metrics = {"Best Model Accuray": best_model_accuracy, "Current Model Accuracy": dev_predictions}
 
         # if metrics is not empty, update the progress bar
         if len(metrics) > 0:
