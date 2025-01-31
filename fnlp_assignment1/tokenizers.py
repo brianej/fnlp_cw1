@@ -6,6 +6,8 @@ from tqdm import tqdm
 import pickle
 import os
 import random
+import collections as Counter
+from itertools import islice
 
 # compiled regex for splitting text to words and punctuation
 identify_words_regex = re.compile(r"\w+|[^\w\s]", re.UNICODE)
@@ -88,6 +90,15 @@ class NgramTokenizer(Tokenizer):
         Input: "This movie was really bad, but bad in a fun way, so I loved it."
         Output: [16999, 51610, 39000, 44191, 89954, 14539, 50931]
         """
+        token = self.token_to_id
+        id = self.id_to_token
+        words = convert_text_to_words(text)
+        if return_token_ids:
+            ngrams = zip(*[islice(words, i, None) for i in range(self.n)])
+            return [token[ngram] for ngram in ngrams if ngram in token]
+        else:
+            ngrams = zip(*[islice(words, i, None) for i in range(self.n)])
+            return [ngram for ngram in ngrams if ngram in token]
         raise Exception("TODO: Implement this method")
 
     def train(self, corpus: List[str]):
@@ -109,12 +120,33 @@ class NgramTokenizer(Tokenizer):
         set self.token_to_id: {"This": 0, "movie": 1, "was": 2, "good": 3, "bad": 4}
         set self.id_to_token: {0: "This", 1: "movie", 2: "was", 3: "good", 4: "bad"}
         """
-        raise Exception("TODO: Implement this method")
+        token_counts = {}
+
+        for text in corpus:
+            words = convert_text_to_words(text)
+            ngrams = zip(*[islice(words, i, None) for i in range(self.n)])
+            for ngram in ngrams:
+                if ngram in token_counts:
+                    token_counts[ngram] += 1
+                else:
+                    token_counts[ngram] = 1
+
+        if self.vocab_size != -1:
+            # Sort the tokens by frequency and take the top vocab_size tokens
+            most_common_tokens = sorted(token_counts.items(), key=lambda x: x[1], reverse=True)[:self.vocab_size]
+        else:
+            # Use all tokens if vocab_size is not restricted
+            most_common_tokens = list(token_counts.items())
+
+        self.token_to_id = {token: idx for idx, (token, _) in enumerate(most_common_tokens)}
+        self.id_to_token = {idx: token for token, idx in self.token_to_id.items()}
+        #raise Exception("TODO: Implement this method")
 
     def __len__(self):
         """
         TODO: Return the number of tokens in the vocabulary.
         """
+        return len(self.token_to_id)
         raise Exception("TODO: Implement this method")
 
 if __name__ == "__main__":
