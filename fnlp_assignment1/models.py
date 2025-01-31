@@ -188,6 +188,19 @@ class LogisticRegressionClassifier(SentimentClassifier):
         # init weights to 0, could do small random numbers but it's common practice to do 0
         self.weights = np.zeros(len(self.featurizer), dtype=np.float64)
         self.bias = 0
+        
+    def sigmoid_score(self, text: str) -> float:
+        # helper for p(y=1|x)
+        # get counter features
+        features = self.featurizer.extract_features(words)
+        score = 0
+        
+        for ids, count in features.items():
+            # count score for given feature count * weight
+            score += self.weights[ids] * count
+        
+        return (sigmoid(score) + self.bias)
+        
 
     def predict(self, text: str) -> int:
         """
@@ -209,17 +222,7 @@ class LogisticRegressionClassifier(SentimentClassifier):
         sigmoid_score = sigmoid(5) = 0.993...
         Output: 1
         """
-        # get counter features
-        features = self.featurizer.extract_features(words)
-        score = 0
-        
-        for ids, count in features.items():
-            # count score for given feature count * weight
-            score += self.weights[ids] * count
-        
-        sigmoid_score = sigmoid(score) + self.bias
-        
-        return 1 if sigmoid_score >= 0.5 else 0
+        return 1 if sigmoid_score(text) >= 0.5 else 0
 
     def set_weights(self, weights: np.ndarray):
         """
@@ -259,7 +262,24 @@ class LogisticRegressionClassifier(SentimentClassifier):
         set `self.weights`: [-1.5, 1.25, 1.75]
         set `self.bias`: -0.25
         """
-        raise Exception("TODO: Implement this method")
+        if batch_exs[0].label == 1:
+            # to subtract or to add to the weights and bias (positive means its the one we want to maximise the neg loss)
+            positive = batch_exs[0].words
+            negative = batch_exs[1].words
+        else:
+            positive = batch_exs[1].words
+            negative = batch_exs[0].words
+            
+        for i in range(len(self.weights)):
+            # do this because in the origianl extractor if the word is not in the tokenizer then it will be zero so its ok 
+            count_pos = positive[i]
+            count_neg = negative[i]
+            p = sigmoid(self.weights[weight_i] * count + self.bias)
+            
+            # update the weights and bias
+            self.weights[i] += learning_rate * count_pos * (1-p)
+            self.weights[i] -= learning_rate * count_neg * (0-p)
+            self.bias += learning_rate * alpha
 
 
 def get_accuracy(predictions: List[int], labels: List[int]) -> float:
@@ -305,8 +325,16 @@ def train_logistic_regression(
     # Initialize the model and
     # any other variables you want to keep track of
     ##########################################
-    raise Exception("TODO: Implement this section")
-
+    self.train_exs = train_exs
+    self.dev_exs = dev_exs
+    self.feat_extractor = feat_extractor
+    self.learning_rate = learning_rate
+    self.batch_size = batch_size
+    self.epochs = epochs
+    self.model = LogisticRegressionClassifier(feat_extractor)
+    self.best_model = []
+    self.best_model_accuracy = 0
+    
     ##########################################
     # Learning rate scheduler
     # We don't ask you to implement this, but modifying the 
@@ -325,8 +353,8 @@ def train_logistic_regression(
         # with the same elements but in a random order
         # This step helps prevent overfitting
         ##########################################
-        shuffled_train_exs = []
-        raise Exception("TODO: Implement this section")
+        # copy and shuffle
+        shuffled_train_exs = random.shuffle(self.train_exs[:])
 
         ##########################################
         # Iterate over batches of training examples
@@ -343,7 +371,7 @@ def train_logistic_regression(
             # Update the weights and bias of the model using this batch of examples and the current learning rate
             # (hint: this is running a training step with a batch of examples)
             ##########################################
-            raise Exception("TODO: Implement this section")
+            self.model.training_step(batch_exs, cur_learning_rate)
 
         ##########################################
         # Evaluate on the dev set
@@ -351,7 +379,10 @@ def train_logistic_regression(
         # you may find the run_model_over_dataset 
         # and get_accuracy functions helpful
         ##########################################
-        raise Exception("TODO: Implement this section")
+        dev_predictions = run_model_over_dataset(self.model, self.dev_exs)
+        if dev_predictions > self.best_model_accuracy:
+            self.best_model_accuracy = dev_predictions
+            self.best_model = (self.model.get_weights(), self.model.get_bias())
 
         ##########################################
         # Log any metrics you want here, tqdm will
@@ -362,8 +393,7 @@ def train_logistic_regression(
         # this step is helpful for debugging and making sure you are saving the best model so far
         # at the end of training, your 'best_dev_acc' should be the best accuracy on the dev set
         ##########################################
-        metrics = {}
-        raise Exception("TODO: Implement this section")
+        metrics = {"Best Model Accuray": self.best_model_accuracy, "Current Model Accuracy": dev_predictions}
 
         # if metrics is not empty, update the progress bar
         if len(metrics) > 0:
@@ -373,7 +403,8 @@ def train_logistic_regression(
     # Set the weights and bias of the model to
     # the best model so far by dev accuracy
     ##########################################
-    raise Exception("TODO: Implement this section")
+    self.model.set_weights(self.best_model[0])
+    self.model.set_bias(self.best_model[1])
 
     return model
 
