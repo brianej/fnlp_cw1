@@ -1,5 +1,5 @@
 # models.py
-
+import random
 from utils import SentimentExample
 from typing import List
 from collections import Counter
@@ -264,22 +264,21 @@ class LogisticRegressionClassifier(SentimentClassifier):
         """
         if batch_exs[0].label == 1:
             # to subtract or to add to the weights and bias (positive means its the one we want to maximise the neg loss)
-            positive = batch_exs[0].words
-            negative = batch_exs[1].words
+            positive = self.featurizer.extract_features(batch_exs[0].words)
+            negative = self.featurizer.extract_features(batch_exs[1].words)
         else:
-            positive = batch_exs[1].words
-            negative = batch_exs[0].words
-            
-        for i in range(len(self.weights)):
-            # do this because in the origianl extractor if the word is not in the tokenizer then it will be zero so its ok 
-            count_pos = positive[i]
-            count_neg = negative[i]
-            p = sigmoid(self.weights[weight_i] * count + self.bias)
-            
-            # update the weights and bias
-            self.weights[i] += learning_rate * count_pos * (1-p)
-            self.weights[i] -= learning_rate * count_neg * (0-p)
-            self.bias += learning_rate * alpha
+            positive = self.featurizer.extract_features(batch_exs[1].words)
+            negative = self.featurizer.extract_features(batch_exs[0].words)
+
+        for key, value in positive.items():
+            p = sigmoid(self.weights[key] * value + self.bias)
+            self.weights[key] += learning_rate * value * (1-p)
+            self.bias += learning_rate * p
+        
+        for key, value in negative.items():
+            p = sigmoid(self.weights[key] * value + self.bias)
+            self.weights[key] += learning_rate * value * (0-p)
+            self.bias += learning_rate * p
 
 
 def get_accuracy(predictions: List[int], labels: List[int]) -> float:
@@ -325,15 +324,9 @@ def train_logistic_regression(
     # Initialize the model and
     # any other variables you want to keep track of
     ##########################################
-    self.train_exs = train_exs
-    self.dev_exs = dev_exs
-    self.feat_extractor = feat_extractor
-    self.learning_rate = learning_rate
-    self.batch_size = batch_size
-    self.epochs = epochs
-    self.model = LogisticRegressionClassifier(feat_extractor)
-    self.best_model = []
-    self.best_model_accuracy = 0
+    model = LogisticRegressionClassifier(feat_extractor)
+    best_model = []
+    best_model_accuracy = 0
     
     ##########################################
     # Learning rate scheduler
@@ -354,7 +347,7 @@ def train_logistic_regression(
         # This step helps prevent overfitting
         ##########################################
         # copy and shuffle
-        shuffled_train_exs = random.shuffle(self.train_exs[:])
+        shuffled_train_exs = random.sample(train_exs, len(train_exs))
 
         ##########################################
         # Iterate over batches of training examples
@@ -371,7 +364,7 @@ def train_logistic_regression(
             # Update the weights and bias of the model using this batch of examples and the current learning rate
             # (hint: this is running a training step with a batch of examples)
             ##########################################
-            self.model.training_step(batch_exs, cur_learning_rate)
+            model.training_step(batch_exs, cur_learning_rate)
 
         ##########################################
         # Evaluate on the dev set
@@ -379,10 +372,10 @@ def train_logistic_regression(
         # you may find the run_model_over_dataset 
         # and get_accuracy functions helpful
         ##########################################
-        dev_predictions = run_model_over_dataset(self.model, self.dev_exs)
-        if dev_predictions > self.best_model_accuracy:
-            self.best_model_accuracy = dev_predictions
-            self.best_model = (self.model.get_weights(), self.model.get_bias())
+        dev_predictions = run_model_over_dataset(model, dev_exs)
+        if dev_predictions > best_model_accuracy:
+            best_model_accuracy = dev_predictions
+            best_model = (model.get_weights(), model.get_bias())
 
         ##########################################
         # Log any metrics you want here, tqdm will
@@ -403,8 +396,8 @@ def train_logistic_regression(
     # Set the weights and bias of the model to
     # the best model so far by dev accuracy
     ##########################################
-    self.model.set_weights(self.best_model[0])
-    self.model.set_bias(self.best_model[1])
+    model.set_weights(best_model[0])
+    model.set_bias(best_model[1])
 
     return model
 
