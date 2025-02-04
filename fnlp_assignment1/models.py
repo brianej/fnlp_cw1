@@ -258,23 +258,16 @@ class LogisticRegressionClassifier(SentimentClassifier):
         set `self.weights`: [-1.5, 1.25, 1.75]
         set `self.bias`: -0.25
         """
-        if batch_exs[0].label == 1:
-            # to subtract or to add to the weights and bias (positive means its the one we want to maximise the neg loss)
-            positive = self.featurizer.extract_features(batch_exs[0].words)
-            negative = self.featurizer.extract_features(batch_exs[1].words)
-        else:
-            positive = self.featurizer.extract_features(batch_exs[1].words)
-            negative = self.featurizer.extract_features(batch_exs[0].words)
-
-        for key, value in positive.items():
-            p = sigmoid(self.weights[key] * value + self.bias)
-            self.weights[key] += learning_rate * value * (1-p)
-            self.bias += learning_rate * p
-        
-        for key, value in negative.items():
-            p = sigmoid(self.weights[key] * value + self.bias)
-            self.weights[key] += learning_rate * value * (0-p)
-            self.bias += learning_rate * -p
+        for text in batch_exs:
+            features = self.featurizer.extract_features(text.words)
+            label = text.label  # 1 for pos,0 for neg
+            
+            for key, value in features.items():
+                p = sigmoid(self.weights[key] * value + self.bias)  
+                
+                # Gradient descent 
+                self.weights[key] += learning_rate * value * (label - p)  # (1-p) for pos, (0-p) for neg
+                self.bias += learning_rate * (label - p)  
 
 
 def get_accuracy(predictions: List[int], labels: List[int]) -> float:
