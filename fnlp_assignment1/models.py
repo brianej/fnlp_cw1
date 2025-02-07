@@ -81,7 +81,14 @@ class CustomFeatureExtractor(FeatureExtractor):
         TODO: Implement your own custom feature extractor. The returned format should be the same as in CountFeatureExtractor,
         a Counter mapping from feature ids to their values.
         """
-        raise Exception("TODO: Implement this method")
+        tokens = self.tokenizer.tokenize(text)
+        counter = Counter()
+        
+        for token in tokens:
+            if token in self.tokenizer.token_to_id:
+                counter[self.tokenizer.token_to_id[token]] = 1
+        
+        return counter
 
 
 class MeanPoolingWordVectorFeatureExtractor(FeatureExtractor):
@@ -111,7 +118,6 @@ class MeanPoolingWordVectorFeatureExtractor(FeatureExtractor):
         else:
             return None
         
-        raise Exception("TODO: Implement this method")
 
     def extract_features(self, text: List[str]) -> Counter:
         """
@@ -132,7 +138,6 @@ class MeanPoolingWordVectorFeatureExtractor(FeatureExtractor):
             return Counter
         mean_vector = np.mean(vectors,axis=0)
         return Counter({i: float(val) for i, val in enumerate(mean_vector)})
-        raise Exception("TODO: Implement this method")
         
 
 class SentimentClassifier(object):
