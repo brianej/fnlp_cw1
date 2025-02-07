@@ -54,13 +54,13 @@ class CountFeatureExtractor(FeatureExtractor):
         """
         # did the second implementation
         # get lowercased tokens from text by splitting with spaces
-        list_words = text.lower().split(" ")
+        # using ngram 2
+        tokens = self.tokenizer.tokenize(text)
         counter = Counter()
-            
-        for word in list_words:
-            # increment count if the token is in the tokenizer
-            if word in self.tokenizer.token_to_id:
-                counter[self.tokenizer.token_to_id[word]] += 1
+        
+        for token in tokens:
+            if token in self.tokenizer.token_to_id:
+                counter[self.tokenizer.token_to_id[token]] += 1
         
         return counter
 
@@ -194,8 +194,10 @@ class LogisticRegressionClassifier(SentimentClassifier):
         for ids, count in features.items():
             # count score for given feature count * weight
             score += self.weights[ids] * count
+            
+        score += self.bias
         
-        return (sigmoid(score) + self.bias)
+        return sigmoid(score) 
         
 
     def predict(self, text: str) -> int:
@@ -258,23 +260,21 @@ class LogisticRegressionClassifier(SentimentClassifier):
         set `self.weights`: [-1.5, 1.25, 1.75]
         set `self.bias`: -0.25
         """
-        if batch_exs[0].label == 1:
-            # to subtract or to add to the weights and bias (positive means its the one we want to maximise the neg loss)
-            positive = self.featurizer.extract_features(batch_exs[0].words)
-            negative = self.featurizer.extract_features(batch_exs[1].words)
-        else:
-            positive = self.featurizer.extract_features(batch_exs[1].words)
-            negative = self.featurizer.extract_features(batch_exs[0].words)
+        for text in batch_exs:
+            features = self.featurizer.extract_features(text.words)
+            label = text.label  # 1 for pos,0 for neg
+            p = self.bias
+            
+            for key, value in features.items():
+                p += self.weights[key] * value 
+                
+            pred = 1 if sigmoid(p) >= 0.5 else 0
+            
+            for key, value in features.items():
+                self.weights[key] += learning_rate * value * (label - pred) / len(batch_exs)
+                
 
-        for key, value in positive.items():
-            p = sigmoid(self.weights[key] * value + self.bias)
-            self.weights[key] += learning_rate * value * (1-p)
-            self.bias += learning_rate * p
-        
-        for key, value in negative.items():
-            p = sigmoid(self.weights[key] * value + self.bias)
-            self.weights[key] += learning_rate * value * (0-p)
-            self.bias += learning_rate * -p
+            self.bias += learning_rate * (label - pred)  
 
 
 def get_accuracy(predictions: List[int], labels: List[int]) -> float:
