@@ -117,6 +117,7 @@ class CountFeatureExtractorTest(unittest.TestCase):
         unigram = NgramTokenizer(n=1)
         unigram.train(dummy_corpus)
         count_feature_extractor = CountFeatureExtractor(unigram)
+        print(unigram)
         text = dummy_corpus[0]
         features = count_feature_extractor.extract_features(text)
         # you may have different order of features, but the count values should be the same

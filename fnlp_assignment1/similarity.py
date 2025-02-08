@@ -9,6 +9,8 @@ def train_word2vec_model(sentences: List[List[str]]) -> Word2Vec:
     Train a word2vec model using gensim, should have vector size of 300, min_count of 1
     Should be ~1 line of code
     """
+    model = Word2Vec(sentences= sentences, vector_size= 300, min_count=1)
+    return model
     raise Exception("TODO: Implement this method")
     
 def simple_text_to_words(text: str) -> List[str]:
