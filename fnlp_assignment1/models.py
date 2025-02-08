@@ -54,13 +54,13 @@ class CountFeatureExtractor(FeatureExtractor):
         """
         # did the second implementation
         # get lowercased tokens from text by splitting with spaces
-        list_words = text.lower().split(" ")
+        # using ngram 2
+        tokens = self.tokenizer.tokenize(text)
         counter = Counter()
-            
-        for word in list_words:
-            # increment count if the token is in the tokenizer
-            if word in self.tokenizer.token_to_id:
-                counter[self.tokenizer.token_to_id[word]] += 1
+        
+        for token in tokens:
+            if token in self.tokenizer.token_to_id:
+                counter[self.tokenizer.token_to_id[token]] += 1
         
         return counter
 
@@ -81,7 +81,15 @@ class CustomFeatureExtractor(FeatureExtractor):
         TODO: Implement your own custom feature extractor. The returned format should be the same as in CountFeatureExtractor,
         a Counter mapping from feature ids to their values.
         """
-        raise Exception("TODO: Implement this method")
+        tokens = self.tokenizer.tokenize(text)
+        counter = Counter()
+        
+        for token in tokens:
+            if token in self.tokenizer.token_to_id:
+                # so only count it once
+                counter[self.tokenizer.token_to_id[token]] = 1
+        
+        return counter
 
 
 class MeanPoolingWordVectorFeatureExtractor(FeatureExtractor):
@@ -105,13 +113,7 @@ class MeanPoolingWordVectorFeatureExtractor(FeatureExtractor):
         Input `word`: "328hdnsr32ion"
         Output: None
         """
-        if self.word_to_vector_model.get(word) is not None:
-            return self.word_to_vector_model.get(word)
-        
-        else:
-            return None
-        
-        raise Exception("TODO: Implement this method")
+        return self.word_to_vector_model[word] if word in self.word_to_vector_model else None
 
     def extract_features(self, text: List[str]) -> Counter:
         """
@@ -125,14 +127,15 @@ class MeanPoolingWordVectorFeatureExtractor(FeatureExtractor):
         from token ids to their counts, normally you would not need to do this conversion.
         Remember to ignore words that do not have a word vector.
         """
-        tokens = self.tokenizers.tokenize(text)
+        tokens = self.tokenizer.tokenize(text)
         vectors = [self.get_word_vector(word) for word in tokens if self.get_word_vector(word) is not None]
         
         if not vectors:
-            return Counter
+            return Counter()
+        
         mean_vector = np.mean(vectors,axis=0)
+        
         return Counter({i: float(val) for i, val in enumerate(mean_vector)})
-        raise Exception("TODO: Implement this method")
         
 
 class SentimentClassifier(object):
@@ -194,8 +197,10 @@ class LogisticRegressionClassifier(SentimentClassifier):
         for ids, count in features.items():
             # count score for given feature count * weight
             score += self.weights[ids] * count
+            
+        score += self.bias
         
-        return (sigmoid(score) + self.bias)
+        return sigmoid(score) 
         
 
     def predict(self, text: str) -> int:
@@ -261,13 +266,19 @@ class LogisticRegressionClassifier(SentimentClassifier):
         for text in batch_exs:
             features = self.featurizer.extract_features(text.words)
             label = text.label  # 1 for pos,0 for neg
+
+            p = self.bias
             
             for key, value in features.items():
-                p = sigmoid(self.weights[key] * value + self.bias)  
+                p += self.weights[key] * value 
                 
-                # Gradient descent 
-                self.weights[key] += learning_rate * value * (label - p)  # (1-p) for pos, (0-p) for neg
-                self.bias += learning_rate * (label - p)  
+            pred = 1 if sigmoid(p) >= 0.5 else 0
+            
+            for key, value in features.items():
+                self.weights[key] += learning_rate * value * (label - pred) / len(batch_exs)
+                
+
+            self.bias += learning_rate * (label - pred) / len(batch_exs)
 
 
 def get_accuracy(predictions: List[int], labels: List[int]) -> float:

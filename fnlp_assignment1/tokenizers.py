@@ -99,7 +99,6 @@ class NgramTokenizer(Tokenizer):
         else:
             ngrams = zip(*[islice(words, i, None) for i in range(self.n)])
             return [ngram for ngram in ngrams if ngram in token]
-        raise Exception("TODO: Implement this method")
 
     def train(self, corpus: List[str]):
         """
@@ -147,8 +146,7 @@ class NgramTokenizer(Tokenizer):
         TODO: Return the number of tokens in the vocabulary.
         """
         return len(self.token_to_id)
-        raise Exception("TODO: Implement this method")
-
+        
 if __name__ == "__main__":
     with jsonlines.open("data/imdb_train.txt", "r") as reader:
         dataset = list(reader)
