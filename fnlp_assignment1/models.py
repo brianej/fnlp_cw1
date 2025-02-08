@@ -86,6 +86,7 @@ class CustomFeatureExtractor(FeatureExtractor):
         
         for token in tokens:
             if token in self.tokenizer.token_to_id:
+                # so only count it once
                 counter[self.tokenizer.token_to_id[token]] = 1
         
         return counter
@@ -279,7 +280,7 @@ class LogisticRegressionClassifier(SentimentClassifier):
                 self.weights[key] += learning_rate * value * (label - pred) / len(batch_exs)
                 
 
-            self.bias += learning_rate * (label - pred)  
+            self.bias += learning_rate * (label - pred) / len(batch_exs)
 
 
 def get_accuracy(predictions: List[int], labels: List[int]) -> float:
