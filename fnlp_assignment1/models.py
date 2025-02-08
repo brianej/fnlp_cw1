@@ -266,6 +266,7 @@ class LogisticRegressionClassifier(SentimentClassifier):
         for text in batch_exs:
             features = self.featurizer.extract_features(text.words)
             label = text.label  # 1 for pos,0 for neg
+
             p = self.bias
             
             for key, value in features.items():
