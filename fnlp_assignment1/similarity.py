@@ -10,7 +10,7 @@ def train_word2vec_model(sentences: List[List[str]]) -> Word2Vec:
     Should be ~1 line of code
     """
     return Word2Vec(sentences= sentences, vector_size= 300, min_count=1)
-    raise Exception("TODO: Implement this method")
+    
     
 def simple_text_to_words(text: str) -> List[str]:
     text = text.translate(str.maketrans('', '', string.punctuation))

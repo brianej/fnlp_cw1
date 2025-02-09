@@ -91,7 +91,6 @@ class NgramTokenizer(Tokenizer):
         Output: [16999, 51610, 39000, 44191, 89954, 14539, 50931]
         """
         token = self.token_to_id
-        id = self.id_to_token
         words = convert_text_to_words(text)
         if return_token_ids:
             ngrams = zip(*[islice(words, i, None) for i in range(self.n)])
